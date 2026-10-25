@@ -1,0 +1,78 @@
+{
+  "lesson": "17-dataset-audit-checkpoint",
+  "title": "Dataset Audit Checkpoint",
+  "questions": [
+    {
+      "stage": "pre",
+      "question": "Why does this checkpoint read the CSV in load.py and count labels in report.py?",
+      "options": [
+        "So report.py can open the file and parse the header on its own",
+        "So a count can be tested with records that never came from a file",
+        "So config.py can store the CSV text for the other modules to import",
+        "So checks.py can print the summary and report.py can set the log level"
+      ],
+      "correct": 1,
+      "explanation": "load.py returns records. report.py only counts the records it is given. A test can pass a list and never create a CSV. The logger and the environment stay in their own modules."
+    },
+    {
+      "stage": "check",
+      "question": "The sample has three legal labels, and AUDIT_MIN_ROWS is 10000. What fails?",
+      "options": [
+        "ConfigError, because 10000 is above the largest legal minimum",
+        "SchemaError, because the file has fewer columns than the minimum",
+        "CheckError, because the batch is shorter than the configured minimum",
+        "Nothing fails, because the default minimum of 1 still wins"
+      ],
+      "correct": 2,
+      "explanation": "10000 is a valid integer setting. The CSV still has its columns. check_records compares the row count with min_rows and raises CheckError when the batch is too small."
+    },
+    {
+      "stage": "check",
+      "question": "The header is text,score and the configured label column is label. What is raised?",
+      "options": [
+        "SchemaError, and the message names the missing label column",
+        "CheckError, and the message says a label value of 2 was found",
+        "ConfigError, because a header is an environment variable string",
+        "A summary with count 0 and both label counts left at 0"
+      ],
+      "correct": 0,
+      "explanation": "load_csv checks the header before any label rule runs. The column label is not there, so the error is SchemaError. A label of 2 would be a later CheckError, after a successful load."
+    },
+    {
+      "stage": "check",
+      "question": "One record has label 2. The column exists and the batch is long enough. What happens?",
+      "options": [
+        "The summary counts that record in the label 1 total",
+        "The loader drops the record and audits the rows that remain",
+        "ConfigError, because 2 is not one of the environment settings",
+        "CheckError, because a label in this audit must be 0 or 1"
+      ],
+      "correct": 3,
+      "explanation": "The integer 2 parses, so load_csv accepts the field. check_records rejects any label outside 0 and 1 and names the record. The summary is not produced."
+    },
+    {
+      "stage": "post",
+      "question": "A successful audit writes a log line. Which facts may that line contain?",
+      "options": [
+        "The text of each row, so the dataset can be reviewed from the log",
+        "The row count and the counts of labels 0 and 1, not the row text",
+        "Every environment variable, so the run can be repeated from the log",
+        "An API token at INFO, because INFO is the level used for success"
+      ],
+      "correct": 1,
+      "explanation": "The info line records how many rows were kept and how the labels split. Row text and tokens are not part of that decision, and copying the environment would leak them."
+    },
+    {
+      "stage": "post",
+      "question": "A test wants the three sample records and must not change the fixture. What is enough?",
+      "options": [
+        "A path in the home directory that every computer already contains",
+        "A download of reviews.csv before the assertion runs",
+        "Records built in memory, or a copy inside a TemporaryDirectory",
+        "The checked-in fixture edited to a bad label and then saved"
+      ],
+      "correct": 2,
+      "explanation": "check_records accepts a sequence of Record objects, so no file is required. A file test writes a copy in a TemporaryDirectory and leaves fixtures/reviews.csv unchanged."
+    }
+  ]
+}

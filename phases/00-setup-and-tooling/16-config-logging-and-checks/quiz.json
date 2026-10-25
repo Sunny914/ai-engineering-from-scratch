@@ -1,0 +1,78 @@
+{
+  "lesson": "16-config-logging-and-checks",
+  "title": "Configuration, Logging, and Checks",
+  "questions": [
+    {
+      "stage": "pre",
+      "question": "You set AUDIT_MIN_ROWS to 10 in the environment. What does Python store before you parse it?",
+      "options": [
+        "An int, because the text looks like a whole number",
+        "A string, because every environment value is text",
+        "A float, because numeric settings keep a decimal point",
+        "A bool, because a set variable means the flag is on"
+      ],
+      "correct": 1,
+      "explanation": "Environment values are strings. The characters 1 and 0 are not the integer 10 until int parses them. A missing or blank variable uses the default instead of crashing."
+    },
+    {
+      "stage": "check",
+      "question": "AUDIT_MIN_ROWS is 0. The other two settings are valid. What does load_config do?",
+      "options": [
+        "It returns min_rows 0 so an empty batch can pass the audit",
+        "It treats 0 as blank and falls back to the default of 1",
+        "It raises ConfigError because the smallest allowed value is 1",
+        "It raises AuditError before it reads the environment at all"
+      ],
+      "correct": 2,
+      "explanation": "The characters 0 parse as an integer, then the rule rejects anything below 1. AuditError is for a batch that fails after the config is already valid. Blank text, not the digit 0, selects the default."
+    },
+    {
+      "stage": "check",
+      "question": "AUDIT_MIN_ROWS is the word ten, and AUDIT_API_TOKEN is also set. What belongs in ConfigError?",
+      "options": [
+        "The variable name and the integer rule, with the token left out",
+        "A full copy of the process environment, including the token",
+        "The text of every dataset row that the audit would have read",
+        "Only the word failed, so the caller must open the source file"
+      ],
+      "correct": 0,
+      "explanation": "The message should say which variable failed and that an integer is required. The token was never part of the audit config, so copying the environment into the error would leak it."
+    },
+    {
+      "stage": "check",
+      "question": "The config is valid, but the batch has fewer rows than min_rows. What should the caller do?",
+      "options": [
+        "Use a bare except, ignore the failure, and return an empty result",
+        "Catch Exception, log every environment variable, and continue",
+        "Replace AuditError with a successful result of zero kept rows",
+        "Let AuditError propagate, because this batch failed a real check"
+      ],
+      "correct": 3,
+      "explanation": "AuditError is the expected outcome of a short batch. Swallowing it, or turning it into a successful result, hides a failed check. A programming error should surface as its own traceback."
+    },
+    {
+      "stage": "post",
+      "question": "A test sets AUDIT_API_TOKEN and then runs a successful audit. What may the log contain?",
+      "options": [
+        "The token at DEBUG level, so a person can retry the call by hand",
+        "The row count and the label column, but not the token",
+        "Every name and value whose variable name starts with AUDIT",
+        "The token printed with print, because print is not a log line"
+      ],
+      "correct": 1,
+      "explanation": "The loader never reads AUDIT_API_TOKEN, and the audit log records counts and the column name. Printing the token is still a leak. DEBUG is not a safe place for a secret."
+    },
+    {
+      "stage": "post",
+      "question": "The logger level is ERROR and the batch passes the row check. Which line is emitted?",
+      "options": [
+        "The info line, because a passing audit is always recorded",
+        "A warning, because a passing audit is an unusual event",
+        "No audit-kept line, because ERROR hides messages below it",
+        "The raw row text, because a high level switches the code to print"
+      ],
+      "correct": 2,
+      "explanation": "A successful audit logs at INFO. A logger set to ERROR records ERROR and hides INFO and WARNING. The row text is not logged at any level."
+    }
+  ]
+}

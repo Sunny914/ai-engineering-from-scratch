@@ -183,6 +183,93 @@
       color: var(--blueprint);
     }
 
+    /* Stage-aware learning-path navigation (manifests with a stages array) */
+    .sidebar-stage {
+      border-top: 1px solid var(--rule-soft);
+    }
+
+    .sidebar-stage--optional {
+      margin-top: 12px;
+      border-top: 1px solid var(--ink-mute);
+    }
+
+    .sidebar-stage-toggle {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      width: 100%;
+      padding: 9px 16px 9px 14px;
+      background: transparent;
+      border: 0;
+      border-left: 2px solid transparent;
+      color: var(--ink);
+      font-family: var(--font-body);
+      font-size: 0.9rem;
+      line-height: 1.3;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .sidebar-stage-toggle:hover {
+      background: var(--blueprint-tint);
+    }
+
+    .sidebar-stage-toggle:focus-visible {
+      outline: 2px solid var(--blueprint);
+      outline-offset: -2px;
+    }
+
+    .sidebar-stage-toggle.has-active {
+      color: var(--blueprint);
+      border-left-color: var(--blueprint);
+    }
+
+    .sidebar-stage-chevron {
+      flex: none;
+      width: 0;
+      height: 0;
+      margin-top: 5px;
+      border-left: 5px solid currentColor;
+      border-top: 4px solid transparent;
+      border-bottom: 4px solid transparent;
+    }
+
+    .sidebar-stage-toggle[aria-expanded="true"] .sidebar-stage-chevron {
+      transform: rotate(90deg);
+    }
+
+    .sidebar-stage-index,
+    .sidebar-stage-count {
+      flex: none;
+      margin-top: 2px;
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.06em;
+      color: var(--ink-mute);
+    }
+
+    .sidebar-stage-title {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .sidebar-stage-toggle.is-complete .sidebar-stage-count {
+      color: var(--blueprint);
+    }
+
+    .sidebar-stage-lessons .sidebar-lesson-link {
+      padding-left: 34px;
+    }
+
+    .sidebar-stage-sublabel {
+      padding: 10px 20px 4px 34px;
+      font-family: var(--font-mono);
+      font-size: 0.66rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--ink-mute);
+    }
+
     .lesson-main {
       flex: 1;
       min-width: 0;
@@ -2502,6 +2589,10 @@
         font-size: 1rem;
         line-height: 1.35;
       }
+      .sidebar-stage-toggle {
+        padding: 12px 18px 12px 14px;
+        font-size: 1rem;
+      }
       .lesson-main {
         margin-left: 0;
         align-items: stretch;
@@ -3504,6 +3595,127 @@
         return String(index + 1).padStart(2, '0') + '-' + lesson.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
       }
 
+      // Stage-aware navigation applies only to manifests that declare a stages
+      // array AND whose lessons carry a matching group. Everything else keeps
+      // the flat sidebar.
+      var learningPathStageOpen = {};
+      var learningPathSidebarCentered = false;
+
+      function learningPathStageList() {
+        if (!learningPathMode || !learningPath || !Array.isArray(learningPath.stages)) return [];
+        // Career routes already have their own stage layout on learning-paths.html
+        // and keep the flat sidebar here.
+        if (learningPath.kind === 'career-route') return [];
+        var stages = learningPath.stages.filter(function (stage) {
+          return stage && typeof stage === 'object' && typeof stage.id === 'string' && stage.id;
+        });
+        var known = {};
+        stages.forEach(function (stage) { known[stage.id] = true; });
+        var grouped = flatLessons.some(function (item) { return item.group && known[item.group]; });
+        return grouped ? stages : [];
+      }
+
+      function learningPathStageLabel(groupId) {
+        var stages = learningPathStageList();
+        for (var si = 0; si < stages.length; si++) {
+          if (stages[si].id === groupId) {
+            return 'Stage ' + (si + 1) + ' of ' + stages.length + ': ' + (stages[si].title || stages[si].id);
+          }
+        }
+        return groupId ? 'Group ' + groupId : '';
+      }
+
+      function learningPathSidebarLinkHtml(item) {
+        var active = item.path === lessonPath;
+        return '<a class="sidebar-lesson-link' + (active ? ' active' : '') + learningPathGateClass(item) + '" href="' + learningPathLessonHref(item.path) + '"' + learningPathGateAttributes(item) + (active ? ' aria-current="page"' : '') + '>' +
+          '<span class="sidebar-lesson-dot ' + lessonProgressClass(item.path, true) + '"></span>' +
+          escapeHtml(item.lessonName) + '</a>';
+      }
+
+      function learningPathCompletedCount(items) {
+        var done = 0;
+        for (var ci = 0; ci < items.length; ci++) {
+          if (window.AIFSProgress && window.AIFSProgress.isLessonComplete(items[ci].path)) done++;
+        }
+        return done;
+      }
+
+      function learningPathSidebarSection(key, indexLabel, title, bodyHtml, done, total, hasActive, extraClass) {
+        var stored = learningPathStageOpen[key];
+        var open = typeof stored === 'boolean' ? stored : hasActive;
+        var panelId = 'sidebarStage-' + key;
+        var html = '<div class="sidebar-stage' + (extraClass ? ' ' + extraClass : '') + '">';
+        html += '<button type="button" class="sidebar-stage-toggle' + (hasActive ? ' has-active' : '') + (total > 0 && done === total ? ' is-complete' : '') + '"' +
+          ' data-stage-toggle="' + escapeAttr(key) + '" aria-expanded="' + (open ? 'true' : 'false') + '" aria-controls="' + escapeAttr(panelId) + '"' +
+          ' title="' + escapeAttr(title + ': ' + done + ' of ' + total + ' complete') + '">';
+        html += '<span class="sidebar-stage-chevron" aria-hidden="true"></span>';
+        if (indexLabel) html += '<span class="sidebar-stage-index">' + escapeHtml(indexLabel) + '</span>';
+        html += '<span class="sidebar-stage-title">' + escapeHtml(title) + '</span>';
+        html += '<span class="sidebar-stage-count">' + done + '/' + total + '</span></button>';
+        html += '<div class="sidebar-stage-lessons" id="' + escapeAttr(panelId) + '"' + (open ? '' : ' hidden') + '>' + bodyHtml + '</div></div>';
+        return html;
+      }
+
+      function learningPathStagedSidebarHtml(stages, requiredItems, optionalItems) {
+        var html = '';
+        var known = {};
+        stages.forEach(function (stage) { known[stage.id] = true; });
+        var sections = stages.map(function (stage, index) {
+          return {
+            key: stage.id,
+            label: String(index + 1).padStart(2, '0'),
+            title: stage.title || stage.id,
+            required: requiredItems.filter(function (item) { return item.group === stage.id; }),
+            optional: optionalItems.filter(function (item) { return item.group === stage.id; })
+          };
+        });
+        var strayRequired = requiredItems.filter(function (item) { return !known[item.group]; });
+        var strayOptional = optionalItems.filter(function (item) { return !known[item.group]; });
+        if (strayRequired.length || strayOptional.length) {
+          sections.push({ key: 'other', label: '', title: 'Other lessons', required: strayRequired, optional: strayOptional });
+        }
+
+        sections.forEach(function (section) {
+          if (!section.required.length) return;
+          var body = section.required.map(learningPathSidebarLinkHtml).join('');
+          var hasActive = section.required.some(function (item) { return item.path === lessonPath; });
+          html += learningPathSidebarSection(section.key, section.label, section.title, body, learningPathCompletedCount(section.required), section.required.length, hasActive, '');
+        });
+
+        if (optionalItems.length) {
+          var optionalBody = '';
+          sections.forEach(function (section) {
+            if (!section.optional.length) return;
+            optionalBody += '<div class="sidebar-stage-sublabel">' + escapeHtml(section.title) + '</div>';
+            optionalBody += section.optional.map(learningPathSidebarLinkHtml).join('');
+          });
+          var optionalHasActive = optionalItems.some(function (item) { return item.path === lessonPath; });
+          html += learningPathSidebarSection('optional', '', 'Optional lessons', optionalBody, learningPathCompletedCount(optionalItems), optionalItems.length, optionalHasActive, 'sidebar-stage--optional');
+        }
+        return html;
+      }
+
+      function centerActiveSidebarLink(sidebar) {
+        var active = sidebar.querySelector('.sidebar-lesson-link.active');
+        if (!active) return;
+        var offset = active.getBoundingClientRect().top - sidebar.getBoundingClientRect().top;
+        sidebar.scrollTop += offset - sidebar.clientHeight / 3;
+      }
+
+      function initLearningPathStageToggles() {
+        var sidebar = document.getElementById('lessonSidebar');
+        if (!sidebar) return;
+        sidebar.addEventListener('click', function (event) {
+          var button = event.target && event.target.closest ? event.target.closest('[data-stage-toggle]') : null;
+          if (!button || !sidebar.contains(button)) return;
+          var open = button.getAttribute('aria-expanded') !== 'true';
+          learningPathStageOpen[button.getAttribute('data-stage-toggle')] = open;
+          button.setAttribute('aria-expanded', open ? 'true' : 'false');
+          var panel = document.getElementById(button.getAttribute('aria-controls'));
+          if (panel) panel.hidden = !open;
+        });
+      }
+
       function buildSidebar() {
         var sidebar = document.getElementById('lessonSidebar');
         if (!sidebar) return;
@@ -3548,6 +3760,16 @@
           var requiredPathLessons = flatLessons.filter(function (item) { return item.required !== false; });
           var optionalPathLessons = flatLessons.filter(function (item) { return item.required === false; });
           pathHtml += '<div class="sidebar-phase-header">' + escapeHtml(learningPath.title || learningPath.id) + ' · ' + requiredPathLessons.length + ' lessons</div>';
+          var pathStages = learningPathStageList();
+          if (pathStages.length) {
+            pathHtml += learningPathStagedSidebarHtml(pathStages, requiredPathLessons, optionalPathLessons);
+            sidebar.innerHTML = pathHtml;
+            if (!learningPathSidebarCentered) {
+              learningPathSidebarCentered = true;
+              centerActiveSidebarLink(sidebar);
+            }
+            return;
+          }
           for (var lpi = 0; lpi < requiredPathLessons.length; lpi++) {
             var pathLesson = requiredPathLessons[lpi];
             var pathActive = pathLesson.path === lessonPath;
@@ -4095,7 +4317,7 @@
           tags += '<span class="lesson-action-tag">' + escapeHtml(learningPath.title || learningPath.id) + '</span>';
           if (learningPath.estimatedMinutes) tags += '<span class="lesson-action-tag">Path ' + escapeHtml(String(learningPath.estimatedMinutes)) + ' min</span>';
           if (entry && entry.minutes) tags += '<span class="lesson-action-tag">Lesson ' + escapeHtml(String(entry.minutes)) + ' min</span>';
-          if (entry && entry.group) tags += '<span class="lesson-action-tag">Group ' + escapeHtml(entry.group) + '</span>';
+          if (entry && entry.group) tags += '<span class="lesson-action-tag">' + escapeHtml(learningPathStageLabel(entry.group)) + '</span>';
         }
         panel.innerHTML =
           '<div class="lesson-action-head"><div><h2 class="lesson-action-title" id="lessonActionTitle">Act on this lesson</h2>' +
@@ -5908,11 +6130,28 @@
             focusedHtml += learningPathPrerequisiteCallout(nextRequired, 'Before the next lesson');
           } else {
             focusedHtml += '<div class="path-completion-actions">';
-            for (var focusedOptionalIndex = 0; focusedOptionalIndex < focusedOptionalLessons.length; focusedOptionalIndex++) {
+            // Staged paths can carry many optional lessons; show only the next
+            // few here and leave the full list to the sidebar section.
+            var focusedStaged = learningPathStageList().length > 0;
+            var focusedOptionalStart = 0;
+            if (focusedStaged) {
+              var focusedOptionalCurrent = focusedOptionalLessons.findIndex(function (item) { return item.path === lessonPath; });
+              focusedOptionalStart = focusedOptionalCurrent >= 0 ? focusedOptionalCurrent + 1 : 0;
+            }
+            var focusedOptionalShown = 0;
+            for (var focusedOptionalIndex = focusedOptionalStart; focusedOptionalIndex < focusedOptionalLessons.length; focusedOptionalIndex++) {
               var focusedOptionalLesson = focusedOptionalLessons[focusedOptionalIndex];
               if (focusedOptionalLesson.path === lessonPath) continue;
+              if (focusedStaged && focusedOptionalShown >= 3) break;
+              focusedOptionalShown++;
               var focusedOptionalLocked = learningPathEntryLocked(focusedOptionalLesson);
-              focusedHtml += '<a class="path-completion-link' + learningPathGateClass(focusedOptionalLesson) + '" href="' + learningPathLessonHref(focusedOptionalLesson.path) + '"' + learningPathGateAttributes(focusedOptionalLesson) + '>' + (focusedOptionalLocked ? 'Locked optional capstone: ' : 'Optional capstone: ') + escapeHtml(focusedOptionalLesson.lessonName) + '</a>';
+              var focusedOptionalLabel = focusedStaged
+                ? (focusedOptionalLocked ? 'Locked optional lesson: ' : 'Optional lesson: ')
+                : (focusedOptionalLocked ? 'Locked optional capstone: ' : 'Optional capstone: ');
+              focusedHtml += '<a class="path-completion-link' + learningPathGateClass(focusedOptionalLesson) + '" href="' + learningPathLessonHref(focusedOptionalLesson.path) + '"' + learningPathGateAttributes(focusedOptionalLesson) + '>' + focusedOptionalLabel + escapeHtml(focusedOptionalLesson.lessonName) + '</a>';
+            }
+            if (focusedStaged && focusedOptionalLessons.length - focusedOptionalStart > focusedOptionalShown) {
+              focusedHtml += '<span class="phase-progress-text">More optional lessons are listed in the sidebar.</span>';
             }
             if (focusedLessons.length) focusedHtml += '<a href="' + learningPathLessonHref(focusedLessons[0].path) + '">Restart path</a>';
             focusedHtml += '<a href="catalog.html">Full course catalog</a></div>';
@@ -6083,6 +6322,7 @@
         initializeLessonData();
         buildSidebar();
         initSidebarToggle();
+        initLearningPathStageToggles();
         initScrollProgress();
         initLearningPathGateNavigation();
         if (window.AIFSProgress) window.AIFSProgress.onChange(refreshProgressUi);

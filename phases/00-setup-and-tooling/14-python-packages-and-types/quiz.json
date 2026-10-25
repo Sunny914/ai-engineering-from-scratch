@@ -1,0 +1,78 @@
+{
+  "lesson": "14-python-packages-and-types",
+  "title": "Python Packages, Project Structure, and Type Hints",
+  "questions": [
+    {
+      "stage": "pre",
+      "question": "What can other Python code import as one name?",
+      "options": [
+        "Only a file whose name is main.py",
+        "Any directory, as soon as it contains a .py file",
+        "A directory of modules that contains __init__.py",
+        "A function, but only after the script has already run"
+      ],
+      "correct": 2,
+      "explanation": "A package is a directory marked by __init__.py. One module is a single file. A directory with no __init__.py is not imported as that package."
+    },
+    {
+      "stage": "check",
+      "question": "Which import should a caller outside auditlib use?",
+      "options": [
+        "from auditlib import summarize",
+        "from auditlib.load import _row_to_record",
+        "from auditlib.stats import open",
+        "import auditlib.main as summarize"
+      ],
+      "correct": 0,
+      "explanation": "summarize is one of the four names __init__.py exports. Helpers that start with an underscore stay in their module. main.py is not part of the package."
+    },
+    {
+      "stage": "check",
+      "question": "A test wants the mean score of two reviews. What should it pass to summarize?",
+      "options": [
+        "The path of a CSV that the test just wrote",
+        "An open text file positioned at the first row",
+        "The string name of the auditlib package",
+        "A list of Record values built in the test"
+      ],
+      "correct": 3,
+      "explanation": "summarize accepts records and does not open files. The loader is the function that accepts a path. The test can build the list in memory."
+    },
+    {
+      "stage": "check",
+      "question": "What does import main do when main.py ends with the __name__ guard?",
+      "options": [
+        "It runs main() and prints the sample summary",
+        "It loads the module and does not call main()",
+        "It refuses to import a file named main.py",
+        "It runs main() only when a CSV path is missing"
+      ],
+      "correct": 1,
+      "explanation": "On import, __name__ is the module name, not __main__. The guard calls main() only when you execute the file."
+    },
+    {
+      "stage": "post",
+      "question": "load_records reads a CSV that has the header and no data rows. What does it return?",
+      "options": [
+        "None, because an empty summary is not valid",
+        "A Summary with mean_score 0.0",
+        "An empty list that the caller can summarize",
+        "ValueError, because the file has no records"
+      ],
+      "correct": 2,
+      "explanation": "A header with no rows is an empty dataset, so the loader returns []. summarize([]) then reports count 0 and mean_score None. A file with no header is the case that raises ValueError."
+    },
+    {
+      "stage": "post",
+      "question": "Row 4 has score high, and the header is row 1. Which error is appropriate?",
+      "options": [
+        "ValueError that mentions line 4",
+        "FileNotFoundError for the reviews file",
+        "A bare except that prints the whole row",
+        "Summary with mean_score left as None"
+      ],
+      "correct": 0,
+      "explanation": "A non-numeric score is invalid input on a known line. FileNotFoundError is for a missing path. The loader raises ValueError before summarize runs."
+    }
+  ]
+}

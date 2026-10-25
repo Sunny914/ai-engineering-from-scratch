@@ -1,0 +1,78 @@
+{
+  "lesson": "15-testing-and-fakes",
+  "title": "Testing with Fakes and Temporary Files",
+  "questions": [
+    {
+      "stage": "pre",
+      "question": "A test calls review_batch and the call returns. What else does a useful test require?",
+      "options": [
+        "The call must print a log line to the terminal",
+        "The report fields must match the expected numbers",
+        "The test file must import the CSV module directly",
+        "The function must open reviews.csv from the home directory"
+      ],
+      "correct": 1,
+      "explanation": "A test that only checks that a function returned is silent when the mean is wrong. Assert the count, the mean, or the exception the caller is supposed to see."
+    },
+    {
+      "stage": "check",
+      "question": "Two tests each write a CSV. Where should that file live?",
+      "options": [
+        "In the repository next to main.py, so the path stays short",
+        "In the home directory, under a fixed name such as reviews.csv",
+        "In a TemporaryDirectory created for that test and then removed",
+        "On a shared network drive the whole class can append to"
+      ],
+      "correct": 2,
+      "explanation": "A temporary directory belongs to one test. setUp creates it and tearDown deletes it, so a failed test does not leave a path the next test reads."
+    },
+    {
+      "stage": "check",
+      "question": "You want the mean of two records and you do not want disk access. What do you pass?",
+      "options": [
+        "A MemoryReader, or any object whose read method returns those records",
+        "The path of a CSV that CsvReader will open during the assertion",
+        "A patch of the socket module around a call that still reads a file",
+        "The string REVIEW_CSV, and review_batch loads that variable itself"
+      ],
+      "correct": 0,
+      "explanation": "review_batch only calls source.read(). A memory reader returns the list. The batch does not look up REVIEW_CSV and does not open a path."
+    },
+    {
+      "stage": "check",
+      "question": "A test omits clock and still needs the date 2026-01-02. What makes that repeatable?",
+      "options": [
+        "Compare the report with datetime.now() inside the assertion",
+        "Sleep one second so the clock cannot change during the call",
+        "Write the date into a CSV column and read that column back",
+        "Patch the datetime used by review_batch so now returns that instant"
+      ],
+      "correct": 3,
+      "explanation": "Without a clock argument, review_batch calls datetime.now. Replacing that datetime for the duration of the test fixes the date. Reading the real clock can fail at midnight."
+    },
+    {
+      "stage": "post",
+      "question": "MemoryReader is given an empty list and a fixed clock. Which report is correct?",
+      "options": [
+        "count 0, mean_score 0.0, accepted_rate 0.0",
+        "count 0, mean_score None, accepted_rate None",
+        "ValueError, because a batch must contain one row",
+        "count 1, mean_score None, accepted_rate None"
+      ],
+      "correct": 1,
+      "explanation": "An empty batch is valid. There is no mean and no accepted rate to divide by. The date still comes from the clock you passed."
+    },
+    {
+      "stage": "post",
+      "question": "Which pytest idea matches tempfile.TemporaryDirectory in this lesson?",
+      "options": [
+        "monkeypatch, because it replaces os.environ for one test",
+        "a fixture that builds the Record dataclass for the whole session",
+        "tmp_path, a directory created for one test and removed afterward",
+        "pytest.raises, which is the form of assertRaises used here"
+      ],
+      "correct": 2,
+      "explanation": "tmp_path is pytest's per-test directory. This lesson uses TemporaryDirectory, created in setUp and removed in tearDown. monkeypatch corresponds to patch, not to the directory."
+    }
+  ]
+}

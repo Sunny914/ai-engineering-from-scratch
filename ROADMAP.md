@@ -4,11 +4,11 @@ Status tracker for every phase and lesson. The status glyphs in this file feed
 the website (`site/build.js` parses them into `site/data.js`); do not change
 their shape.
 
-Total estimated time: ~332 hours, at your own pace.
+Total estimated time: ~336 hours, at your own pace.
 
 **Legend:** ✅ Complete &nbsp;·&nbsp; 🚧 In Progress &nbsp;·&nbsp; ⬚ Planned
 
-## Phase 0: Setup & Tooling — ✅ (~16 hours)
+## Phase 0: Setup & Tooling — ✅ (~19 hours)
 
 | # | Lesson | Status | Est. |
 |---|--------|--------|------|
@@ -25,6 +25,10 @@ Total estimated time: ~332 hours, at your own pace.
 | 11 | Linux for AI | ✅ | ~45 min |
 | 12 | Debugging & Profiling | ✅ | ~75 min |
 | 13 | Python for AI Engineering | ✅ | ~120 min |
+| 14 | Python Packages, Project Structure, and Type Hints | ✅ | ~50 min |
+| 15 | Testing with Fakes and Temporary Files | ✅ | ~60 min |
+| 16 | Configuration, Logging, and Checks | ✅ | ~45 min |
+| 17 | Dataset Audit Checkpoint | ✅ | ~70 min |
 
 ## Phase 1: Math Foundations — ✅ (~23 hours)
 
